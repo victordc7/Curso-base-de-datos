@@ -132,3 +132,17 @@ Y en caso de querer ver los que si tienen seudonimo usariamos
 */
 
 SELECT * FROM autores WHERE seudonimo IS NOT NULL;
+
+
+/*
+Sub Consultas
+se realizan consultas dentro de otras para usar el resultado de la primera como condicion de la segunda
+*/
+
+SELECT autor_id FROM libros GROUP BY autor_id HAVING SUM(ventas) > (SELECT AVG(ventas) FROM libros);
+
+/*
+En este ejemplo se ejcutara primero la consulta del promedio, la que esta entre parentesis, y una vez obtenido este promedio se ejecutara la siguiente consulta.
+
+A modo de repaso, en este ejemplo calculamos el promedio de ventas de cada libro, luego agrupamos todos los libros que tienen el mismo autor_id de la tabla libros, sumamos todos los libros vendidos por cada autor y lo compraramos con el promedio calculado anteriormente. Para finalizar devolviendo el autor_id de aquellos que hayan cumplido la condicion.
+*/
