@@ -145,4 +145,9 @@ SELECT autor_id FROM libros GROUP BY autor_id HAVING SUM(ventas) > (SELECT AVG(v
 En este ejemplo se ejcutara primero la consulta del promedio, la que esta entre parentesis, y una vez obtenido este promedio se ejecutara la siguiente consulta.
 
 A modo de repaso, en este ejemplo calculamos el promedio de ventas de cada libro, luego agrupamos todos los libros que tienen el mismo autor_id de la tabla libros, sumamos todos los libros vendidos por cada autor y lo compraramos con el promedio calculado anteriormente. Para finalizar devolviendo el autor_id de aquellos que hayan cumplido la condicion.
+
+Como los autores_id pueden ser poco legibles podemos usar la consulta anterior como una subconsulta para mostrar el nombre y apellido del autor con la siguiente sentencia.
 */
+
+SELECT CONCAT(nombre," ",apellido) FROM autores WHERE autor_id IN (SELECT autor_id FROM libros GROUP BY autor_id HAVING SUM(ventas) > (SELECT AVG(ventas) FROM libros));
+
