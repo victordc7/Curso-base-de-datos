@@ -116,3 +116,21 @@ SELECT CONCAT(nombre," ",apellido) AS "Nombre completo" FROM autores WHERE autor
 Obtener el id de todos los escritores cuyas ventas en sus libros superen el promedio.
 */
 SELECT autor_id FROM libros GROUP BY autor_id HAVING SUM(ventas) > (SELECT AVG(SumaDeVentasPorAutor) FROM (SELECT SUM(ventas) AS SumaDeVentasPorAutor FROM libros GROUP BY autor_id) AS PromedioVentas);
+
+
+/* EJERCICIO 21
+Obtener el id de todos los escritores cuyas ventas en sus libros sean mayores a cien mil ejemplares.
+*/
+SELECT autor_id FROM libros GROUP BY autor_id HAVING MAX(ventas)>100;
+
+
+/* EJERCICIO 22
+Crear una función la cual nos permita saber si un libro es candidato a préstamo o no. Retornar “Disponible” si el libro posee por lo menos un ejemplar en stock, en caso contrario retornar “No disponible.”
+*/
+DELIMITER //
+CREATE FUNCTION candidatoPrestamo(libroid INT)
+RETURNS VARCHAR (20)
+BEGIN
+    RETURN IF((SELECT stock FROM libros WHERE libro_id = libroid)>0,"Disponible","No disponible");
+END//
+DELIMITER ;
