@@ -77,10 +77,11 @@ GROUP BY libros.autor_id;
 Obtener el nombre completo de los cinco autores con más préstamos.
 */
 SELECT
-    libros.autor_id,
+    CONCAT(autores.nombre," ",autores.apellido) AS nombre_autor,
     COUNT(libros.libro_id) AS Total_libros_prestados
 FROM libros_usuarios
 INNER JOIN libros ON libros_usuarios.libro_id = libros.libro_id
+INNER JOIN autores ON libros.autor_id = autores.autor_id
 WHERE libros.libro_id IN (libros_usuarios.libro_id)
 GROUP BY libros.autor_id
 ORDER BY Total_libros_prestados DESC LIMIT 5;
