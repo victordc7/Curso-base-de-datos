@@ -247,3 +247,222 @@ Para hacer una consulta a una vista se hace igual que con las tablas.
 La diferencia entre tabla y vista es que las vistas no ocupan espacio de almacenamiento
 */
 SELECT * FROM vw_prestamos_usuarios;
+
+
+/*
+EJEMPLO PROCEDURE
+*/
+DELIMITER //
+CREATE PROCEDURE prestamo(libro_id_v INT, usuario_id_v INT)
+BEGIN
+    INSERT INTO libros_usuarios(libro_id,usuario_id) VALUES (libro_id_v,usuario_id_v);
+    UPDATE libros SET stock=stock-1 WHERE libro_id=libro_id_v;
+END//
+DELIMITER ;
+
+
+/*
+Para usar un procedur usamos la palabra CALL
+*/
+CALL prestamo(5,2);
+
+
+/*
+IF
+Sirve para poner condiciones en el procedimiento.
+Se pueden agregar ELSEIF entre un if y el ultimo else para agregar condiciones.
+*/
+DELIMITER //
+CREATE PROCEDURE prestamo(libro_id_v INT, usuario_id_v INT)
+BEGIN
+  SET @cantidad = (SELECT stock FROM libros WHERE libro_id = libro_id_v);
+  
+  IF @cantidad > 0 THEN
+    INSERT INTO libros_usuarios(libro_id,usuario_id) VALUES (libro_id_v,usuario_id_v);
+    UPDATE libros SET stock=stock-1 WHERE libro_id=libro_id_v;
+
+    SET @cantidad = @cantidad-1;
+    SELECT CONCAT("Se le presto el libro ",(SELECT titulo FROM libros WHERE libro_id=libro_id_v)," al usuario ",(SELECT CONCAT(nombre," ",apellidos) FROM usuarios WHERE usuario_id=usuario_id_v)," y quedan ",@cantidad," libros en stock") AS mensaje;
+  ELSE
+    SELECT "No es posible realizar el prestamo" AS mensaje;
+  END IF;
+END//
+DELIMITER ;
+
+
+/*
+CASE
+*/
+DELIMITER //
+CREATE PROCEDURE tipo_lector(usuario_id_v INT)
+BEGIN
+  SET @cantidad = (SELECT COUNT(*) FROM libros_usuarios WHERE usuario_id = usuario_id_v);
+
+  CASE
+    WHEN @cantidad >= 20 THEN
+      SELECT "Fanatico" AS mensaje;
+    WHEN @cantidad >= 10 AND @cantidad < 20 THEN
+      SELECT "Afionado" AS mensaje;
+    WHEN @cantidad >= 5 AND @cantidad < 10 THEN
+      SELECT "Promedio" AS mensaje;
+    ELSE
+      SELECT "Nuevo" AS mensaje;
+  END CASE;
+END//
+DELIMITER ;
+
+
+/*
+CICLOS
+*/
+DELIMITER //
+CREATE PROCEDURE libros_azar_1(numero_de_libros INT)
+BEGIN
+  SET @iteraciones= 0;
+
+  WHILE @iteraciones < numero_de_libros DO
+    SELECT libro_id, titulo FROM libros ORDER BY RAND() LIMIT 1;
+    SET @iteraciones = @iteraciones + 1;
+  END WHILE;
+
+END//
+DELIMITER ;
+DELIMITER //
+CREATE PROCEDURE libros_azar_2(numero_de_libros INT)
+BEGIN
+  SET @iteraciones= 0;
+
+  REPEAT
+    SELECT libro_id, titulo FROM libros ORDER BY RAND() LIMIT 1;
+    SET @iteraciones = @iteraciones + 1;
+
+    UNTIL @iteraciones >= numero_de_libros
+  END REPEAT;
+
+END//
+DELIMITER ;
+
+
+/*
+Uso de TRANSACTION dentro de PROCEDURE
+Comenzamos la transaccion, ponemos todas las sentencias que queremos se ejecuten y finalizamos la transaccion con un commit (suponiendo que todo salio bien y queremos qu guarde los cambios).
+En caso de que ocurra algun error (SQLEXCEPTION) saldremos del procedure con la palabra EXIT pero antes ejecutaremos otras sentencias como el ROLLBACK (para que no guarde) ver lineas 355-359
+*/
+DELIMITER //
+CREATE PROCEDURE prestamo(usuario_id INT, libro_id INT)
+BEGIN
+
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    /*aqui puedes poner todo lo que pasa cuando ocurre un error, por ejemplo un mensaje de error o restablecer algunas variables*/
+    ROLLBACK;
+  END;
+
+  START TRANSACTION;
+
+  INSERT INTO libros_usuarios(libro_id, usuario_id) VALUES(libro_id, usuario_id);
+  UPDATE libros SET stock = stock - 1 WHERE libros.libro_id = libro_id;
+  
+  COMMIT;
+
+END//
+DELIMITER ;
+
+
+/*
+RESPALDO DE BASE DE DATOS (mysqldump)
+*/
+/*Para una sola base de datos*/
+mysqldump base_de_datos > ruta/archivo_respaldo.sql
+/*Para varias bases de datos*/
+mysqldump --databases db1 db2 db3 > ruta/archivo_respaldo.sql
+/*Para una sola tabla de una base de datos*/
+mysqldump base_de_datos tabla1 > ruta/archivo_respaldo.sql
+/*Para multiples tablas de una base de datos*/
+mysqldump base_de_datos tabla1 tabla3 > ruta/archivo_respaldo.sql
+
+
+/*
+ASIGNAR PERMISOS
+Primero debemos estar autenticados con el usuario root o un usuario con suficientes permisos.
+*/
+/*Para crear otro usuario*/
+CREATE USER 'usuario'@'localhost' IDENTIFIED BY 'password';
+/*Para asignar TODOS los permisos
+Los asteriscos indican que los permisos serán asignados a todas las bases de datos y a todas las tablas (primer asteriscos bases de datos, segundo asterisco tablas).*/
+GRANT ALL PRIVILEGES ON *.* TO 'nombre_usuario'@'localhost';
+/*Para asignar permisos para ciertas acciones
+Reemplazamos ALL PRIVILEGES y colocamos las acciones que queremos asignar.
+En el siguiente ejemplo se otorgan una serie de permisos solo a la base de datos "codigofacilito" y a todas las tablas, si quieres restringi las tablas cambiar el * por el nombre de la tabla*/
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP ON codigofacilito.* TO 'nombre_usuario'@'localhost';
+/*Una vez hayamos finalizado con los permisos, el último paso será refrescarlos usando*/
+FLUSH PRIVILEGES;
+
+/*
+LISTA DE LOS PRINCIPALES PERMISOS
+*/
+CREATE --permite crear nuevas tablas o bases de datos.
+DROP --permite eliminar tablas o bases de datos.
+DELETE --permite eliminar registros de tablas.
+INSERT --permite insertar registros en tablas.
+SELECT --permite leer registros en las tablas.
+UPDATE --permite actualizar registros en las tablas.
+GRANT OPTION --permite remover permisos de usuarios.
+SHOW DATABASE --Permite listar las bases de datos existentes.
+
+/*
+Otras sentencias utiles
+*/
+/*Listar todos los usuarios*/
+SELECT User FROM mysql.user;
+/*Eliminar usuario*/
+DROP USER 'usuario'@'localhost';
+/*Remover permisos especificos*/
+REVOKE UPDATE, DELETE ON *.* FROM 'usuario'@'localhost';
+/*Remover todos los privilegios*/
+REVOKE ALL PRIVILEGES ON *.* FROM 'usuario'@'localhost';
+
+
+/*
+TRIGGERS
+ver archivo Triggers.sql
+*/
+/*EJEMPLO INSERT
+Para hacer referencia al registro que estamos insertando usamos la palabra NEW*/
+DELIMITER //
+CREATE TRIGGER after_insert_actualizacion_libros
+AFTER INSERT ON libros
+FOR EACH ROW
+BEGIN
+  UPDATE autores SET libros = libros + 1 WHERE autor_id = NEW.autor_id;
+END;
+//
+DELIMITER ;
+/*EJEMPLO DELETE
+Para hacer referencia al registro que estamos eliminando  usamos la palabra OLD*/
+DELIMITER //
+CREATE TRIGGER after_delete_actualizacion_libros
+AFTER DELETE ON libros
+FOR EACH ROW
+BEGIN
+  UPDATE autores SET libros = libros - 1 WHERE autor_id = OLD.autor_id;
+END;
+//
+DELIMITER ;
+/*EJEMPLO UPDATE*/
+DELIMITER //
+CREATE TRIGGER after_update_actualizacion_libros
+AFTER UPDATE ON libros
+FOR EACH ROW
+BEGIN
+
+  IF (NEW.autor_id != OLD.autor_id) THEN
+
+    UPDATE autores SET libros = libros - 1 WHERE autor_id = OLD.autor_id;
+    UPDATE autores SET libros = libros + 1 WHERE autor_id = NEW.autor_id;
+
+  END IF;
+
+END;//
+
+DELIMITER ;
